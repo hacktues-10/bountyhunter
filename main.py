@@ -224,7 +224,8 @@ def create_github_issue(repo, access_token, title, body, labels):
 @click.option('--github_app_id', default=get_default_github_app_id, help='Github app id')
 @click.option('--github_app_private_key_path', default=get_default_github_app_private_key_path, help='Github app private key path')
 @click.option('--github_repo', default=get_default_github_repo, help='Github repo')
-def main(google_key_file, spreadsheet_id, github_app_id, github_app_private_key_path, github_repo):
+@click.option('--dry_run', is_flag=True, default=False, help='Do not create issues, just print them')
+def main(google_key_file, spreadsheet_id, github_app_id, github_app_private_key_path, github_repo, dry_run):
     credentials = Credentials.from_service_account_file(google_key_file, scopes=OAUTH_SCOPES)
     sheet = build('sheets', 'v4', credentials=credentials).spreadsheets()
     reports = get_reports_as_dicts(sheet, spreadsheet_id)
@@ -247,9 +248,12 @@ def main(google_key_file, spreadsheet_id, github_app_id, github_app_private_key_
             category_label = 'enhancement'
         else:
             category_label = 'bug'
-        issue = create_github_issue(github_repo, access_token, title, body, ['bounty', category_label])
         newly_issued_reports.append(report_idx)
-        click.echo('Created issue: %s' % issue['id'])
+        if not dry_run:
+            issue = create_github_issue(github_repo, access_token, title, body, ['bounty', category_label])
+            click.echo('Created issue: %s' % issue['id'])
+        else:
+            click.echo('Would create issue: %s' % title)
 
     click.echo('Newly issued: %d' % len(newly_issued_reports))
     click.echo('Already existing: %d' % len(dismissed_reports))
